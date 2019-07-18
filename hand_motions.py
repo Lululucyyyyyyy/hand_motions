@@ -86,7 +86,7 @@ def forward_prop(X, parameters):
     return Z3
 
 def compute_cost(Z3, Y):
-    cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=Z3,labels=Y))
+    cost = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits_v2(logits=Z3,labels=Y))
     #cost = -tf.reduce_sum(Y*tf.log(tf.clip_by_value(Z3,1e-10,1.0)))
     #cost = -tf.reduce_sum(Y*tf.log(tf.clip_by_value(Z3,1e-10,1.0)))
     #labels_sum = tf.reduce_sum(Y, axis=-1)
@@ -94,6 +94,17 @@ def compute_cost(Z3, Y):
     #softmax = tf.nn.softmax(Z3)
     #cost = tf.reduce_mean(-tf.reduce_sum(softmax * tf.log(Y), axis=-1))
     return cost
+
+'''
+ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=opt, net=net)
+manager = tf.train.CheckpointManager(ckpt, './tf_ckpts', max_to_keep=3)
+ckpt.restore(manager.latest_checkpoint)
+if manager.latest_checkpoint:
+  print("Restored from {}".format(manager.latest_checkpoint))
+else:
+  print("Initializing from scratch.")'''
+#saver = tf.train.Saver()
+
 
 def model(X_train, Y_train, X_test, Y_test, learning_rate = 0.009, num_epochs = 100, minibatch_size = 64, print_cost = True):
     ops.reset_default_graph()                         
@@ -122,11 +133,16 @@ def model(X_train, Y_train, X_test, Y_test, learning_rate = 0.009, num_epochs = 
                 _ , temp_cost = sess.run([optimizer, cost], feed_dict={X:minibatch_X, Y:minibatch_Y})
                 minibatch_cost += temp_cost / num_minibatches
                 
+
+            ckpt.step.assign_add(1)
+
             if print_cost == True and epoch % 5 == 0:
+                #save_path = manager.save()
+                #print("Saved checkpoint for step {}: {}".format(int(ckpt.step), save_path))
                 print ("Cost after epoch %i: %f" % (epoch, minibatch_cost))
             if print_cost == True and epoch % 1 == 0:
                 costs.append(minibatch_cost)
-                
+  
         plt.plot(np.squeeze(costs))
         plt.ylabel('cost')
         plt.xlabel('iterations (per tens)')
@@ -142,9 +158,12 @@ def model(X_train, Y_train, X_test, Y_test, learning_rate = 0.009, num_epochs = 
         test_accuracy = accuracy.eval({X: X_test, Y: Y_test})
         print("Train Accuracy:", train_accuracy)
         print("Test Accuracy:", test_accuracy)
+        #saver.save(sess, 'my_test_model',global_step = 50)
 
         return train_accuracy, test_accuracy, parameters
 _, _, parameters = model(X_train, Y_train, X_test, Y_test)
 print(done)
+
+
 
 
