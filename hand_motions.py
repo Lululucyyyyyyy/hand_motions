@@ -28,17 +28,18 @@ for image in temp:
 my_list = np.array(my_list)
 print(my_list.shape)
 # 0 up, 1 down, 2 left, 3 right, 4 zoom in, 5 zoom out, 6 two, 7 three, 8 four, 9 five
-labels = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1, #16
-          9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9, #17
-          8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8, #17
-          4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4, #17
-          2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, #17
-          5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5, #17
-          3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3, #17
-          7,7,7,7,7,7,7,7,7,7,7,7,7,7,7, #16
-          6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,#16
-          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, #20
-         ]print(len(labels))
+labels = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1, #19
+          9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9, #20
+          8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8, #20
+          4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4, #20
+          2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, #20
+          5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5, #20
+          3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3, #20
+          7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7, #19
+          6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,#19
+          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 #24
+         ]
+print(len(labels))
 labels = np.array(labels)
 c = np.c_[my_list.reshape(len(my_list), -1), labels.reshape(len(labels), -1)]
 X_orig = c[:, :my_list.size//len(my_list)].reshape(my_list.shape)
@@ -47,8 +48,8 @@ X_test_orig = X_orig[0:10]
 Y_test_orig = Y_orig[0:10]
 X_dev_orig = X_orig[12:22]
 Y_dev_orig = Y_orig[12:22]
-X_train_orig = X_orig[23:117]
-Y_train_orig = Y_orig[23:117]
+X_train_orig = X_orig[23:201]
+Y_train_orig = Y_orig[23:201]
 print(len(X_train_orig))
 print(len(Y_train_orig))
 print(len(X_test_orig))
@@ -77,14 +78,16 @@ def initialize_parameters():
     parameters = {"W1": W1,"W2": W2}
     return parameters
 
-def forward_prop(X, parameters):
+def forward_prop(X, parameters, keep_prob = 0.5):
     W1 = parameters['W1']
     W2 = parameters['W2']
     Z1 = tf.nn.conv2d(X,W1, strides = [1,1,1,1], padding = 'SAME')
     A1 = tf.nn.relu(Z1)
+    dropped = tf.nn.dropout(A1,keep_prob=keep_prob)
     P1 = tf.nn.max_pool(A1, ksize = [1,8,8,1], strides = [1,8,8,1], padding = 'SAME')
     Z2 = tf.nn.conv2d(P1,W2, strides = [1,1,1,1], padding = 'SAME')
     A2 = tf.nn.relu(Z2)
+    dropped = tf.nn.dropout(A2,keep_prob=keep_prob)
     P2 = tf.nn.max_pool(A2, ksize = [1,4,4,1], strides = [1,4,4,1], padding = 'SAME')
     P2 = tf.layers.Flatten()(P2)
     Z3 = tf.keras.layers.Dense(10, activation=None)(P2)
@@ -146,8 +149,8 @@ def model(X_train, Y_train, X_, Y_, learning_rate = 0.009, num_epochs = 100, min
         predict_op = tf.argmax(Z3, 1)
         correct_prediction = tf.equal(predict_op, tf.argmax(Y, 1))
 
-        accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
-        #print(accuracy)
+        accuracy = tf.reduce_mean(tf.cast(correct_prediction, "double"))
+        print(accuracy)
         train_accuracy = accuracy.eval({X: X_train, Y: Y_train})
         
         #saver.save(sess, 'my_test_model',global_step = 50)
@@ -164,16 +167,25 @@ def model(X_train, Y_train, X_, Y_, learning_rate = 0.009, num_epochs = 100, min
         init = tf.global_variables_initializer()
         sess.run(init)
         a = sess.run(cost, {X: X_, Y:Y_})
+
+        plt.plot(np.squeeze(costs))
+        plt.ylabel('cost')
+        plt.xlabel('iterations (per tens)')
+        plt.title("Learning rate =" + str(learning_rate))
+        plt.show()
+
         predict_op = tf.argmax(Z3, 1)
         correct_prediction = tf.equal(predict_op, tf.argmax(Y, 1))
-        accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
-        #print(accuracy)
+        
+        accuracy = tf.reduce_mean(tf.cast(correct_prediction, "double"))
+        print(accuracy)
         dev_accuracy = accuracy.eval({X: X_, Y: Y_})
         
     return train_accuracy, dev_accuracy, parameters
 
 train, dev, parameters = model(X_train, Y_train, X_dev, Y_dev)
-print(train, dev)
+print("training accuracy: ", train)
+print("dev accuracy: ", dev)
     
 #print("Train Accuracy:", train_accuracy)
 #print("Test Accuracy:", test_accuracy)
