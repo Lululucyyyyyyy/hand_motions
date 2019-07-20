@@ -12,51 +12,45 @@ from PIL import Image
 import glob
 import random
 from tensorflow.keras import layers
-import os
 
-os.environ['KMP_DUPLICATE_LIB_OK']='True'
-#directions = ['up', 'down', 'left', 'right', 'zoom_in', 'zoom_out', 'two', 'three', 'four', 'five']
+#directions = ['five', 'one']
 my_list = []
-path = "dataset/*.JPG"
+path = "dataset3/*.JPG"
 temp = glob.glob(path)
 for image in temp:
     with open(image, 'rb') as file:
         img = Image.open(file)
         img = img.resize((224, 224))
         np_img = np.array(img)
-        print(np_img.shape)
         my_list.append(np_img)
 my_list = np.array(my_list)
-print(my_list.shape)
-# 0 up, 1 down, 2 left, 3 right, 4 zoom in, 5 zoom out, 6 two, 7 three, 8 four, 9 five
-labels = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1, #19
-          9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9, #20
-          8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8, #20
-          4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4, #20
-          2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, #20
-          5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5, #20
-          3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3, #20
-          7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7, #19
-          6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,#19
-          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 #24
-         ]
+print('my_list.shape: ', my_list.shape)
+
+# 0 five, 1 one
+labels = [0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1]
 print(len(labels))
 labels = np.array(labels)
-print(labels.shape)
-#shuffling
+
 #c = np.c_[my_list.reshape(len(my_list), -1), labels.reshape(len(labels), -1)]
 #X_orig = c[:, :my_list.size//len(my_list)].reshape(my_list.shape)
 #Y_orig = c[:, my_list.size//len(my_list):].reshape(labels.shape)
 p = np.random.permutation(len(my_list))
 X_orig = my_list[p]
 Y_orig = labels[p]
+print('shuffled labels:', Y_orig)
 
-X_test_orig = X_orig[0:10]
-Y_test_orig = Y_orig[0:10]
-X_dev_orig = X_orig[12:22]
-Y_dev_orig = Y_orig[12:22]
-X_train_orig = X_orig[23:201]
-Y_train_orig = Y_orig[23:201]
+X_test_orig = X_orig[0:5]
+Y_test_orig = Y_orig[0:5]
+#X_dev_orig = X_orig[12:22]
+#Y_dev_orig = Y_orig[12:22]
+X_train_orig = X_orig[6:len(labels)]
+Y_train_orig = Y_orig[6:len(labels)]
+print(len(X_train_orig))
+print(len(Y_train_orig))
+#print(len(X_dev_orig))
+#print(len(Y_dev_orig))
+print(len(X_test_orig))
+print(len(Y_test_orig))
 
 X_train = X_train_orig/255
 X_test = X_test_orig/255
@@ -64,13 +58,6 @@ X_dev = X_dev_orig/225
 Y_train = convert_to_one_hot(Y_train_orig, 10).T
 Y_test = convert_to_one_hot(Y_test_orig, 10).T
 Y_dev= convert_to_one_hot(Y_dev_orig, 10).T
-
-print ("number of training examples = " + str(X_train.shape[0]))
-print ("number of test examples = " + str(X_test.shape[0]))
-print ("X_train shape: " + str(X_train.shape))
-print ("Y_train shape: " + str(Y_train.shape))
-print ("X_test shape: " + str(X_test.shape))
-print ("X_dev shape: " + str(X_dev.shape))
 
 def create_placeholders(n_H0, n_W0, n_C0, n_y):
     X = tf.placeholder(tf.float32, [None, n_H0, n_W0, n_C0])
@@ -112,11 +99,7 @@ def compute_cost(Z3, Y, beta=0.01):
     #cost = tf.reduce_mean(-tf.reduce_sum(softmax * tf.log(Y), axis=-1))
     return cost
 
-def accuracy(predictions, labels):
-    return (100.0 * np.sum(np.argmax(predictions, 1) == np.argmax(labels, 1))
-            / predictions.shape[0])
-
-def model(X_train, Y_train, learning_rate = 0.009, num_epochs = 100, minibatch_size = 64, print_cost = True):
+ def model(X_train, Y_train, learning_rate = 0.009, num_epochs = 100, minibatch_size = 64, print_cost = True):
     ops.reset_default_graph()                         
     tf.set_random_seed(1)
     seed = 3                                          
@@ -136,31 +119,26 @@ def model(X_train, Y_train, learning_rate = 0.009, num_epochs = 100, minibatch_s
 
         print("Training")
         
-        for epoch in range(num_epochs):
-            minibatch_cost = 0
-            num_minibatches = int(m / minibatch_size)
-            seed = seed + 1
-            minibatches = random_mini_batches(X_train, Y_train, minibatch_size, seed)
-            for minibatch in minibatches:
-                (minibatch_X, minibatch_Y) = minibatch
-                _, temp_cost = sess.run([optimizer, cost], feed_dict={X:minibatch_X, Y:minibatch_Y})
-                minibatch_cost += temp_cost / num_minibatches
+        for i in range(len(labels)):
+            cost_ = 0
+            _, temp_cost = sess.run([optimizer, cost], feed_dict={X:X_train, Y:Y_train})
+            cost_ += temp_cost / len(labels)
 
-            if print_cost == True and epoch % 5 == 0:
-                print ("Cost after epoch %i: %f" % (epoch, minibatch_cost))
-            if print_cost == True and epoch % 1 == 0:
-                costs.append(minibatch_cost)
+            if print_cost == True:
+                print ("Cost after iteration %i: %f" % (i, cost_))
+            if print_cost == True:
+                costs.append(cost_)
   
         plt.plot(np.squeeze(costs))
         plt.ylabel('cost')
         plt.xlabel('iterations (per tens)')
         plt.title("Learning rate =" + str(learning_rate))
-        plt.show()
+        #plt.show()
 
-        predict_op = tf.argmax(Z3, 1)
-        correct_prediction = tf.equal(predict_op, tf.argmax(Y, 1))
-
+        predicted = tf.argmax(Z3, 1)
+        correct_prediction = tf.equal(predicted, tf.argmax(Y, 1))
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
+        
         #print(accuracy)
         train_accuracy = accuracy.eval({X: X_train, Y: Y_train})
 
@@ -183,14 +161,13 @@ def test(X_test, Y_test, parameters):
     cost = compute_cost(Z3, Y)
     init = tf.global_variables_initializer()
 
-
     print("Validation or Testing")
     with tf.Session() as sess:
         sess.run(init)
         a = sess.run(cost, {X: X_test, Y:Y_test})
 
-        #plt.plot(np.squeeze(a))
-       # plt.show()
+        plt.plot(np.squeeze(a))
+        #plt.show()
 
         predict_op = tf.argmax(Z3, 1)
         correct_prediction = tf.equal(predict_op, tf.argmax(Y, 1))
@@ -202,6 +179,7 @@ def test(X_test, Y_test, parameters):
         saver = tf.train.Saver()
         saver.save(sess, 'hand_motions.ckpt')
         sess.close()
+
         return test_accuracy
 
 train, parameters = model(X_train, Y_train)
