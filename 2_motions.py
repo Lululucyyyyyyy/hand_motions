@@ -15,6 +15,7 @@ from tensorflow.keras import layers
 import os
 
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
+tf.logging.set_verbosity(tf.logging.ERROR)
 
 #directions = ['five', 'one']
 def load_images(globpath):
@@ -31,9 +32,23 @@ load_images(glob.glob("dataset3/*.jpeg"))
 my_list = np.array(my_list)
 print('my_list.shape: ', my_list.shape)
 
-# 0 five (45), 1 one (45)
-labels = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, #45
-          1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]#45
+# 0 five (74), 1 one (74)
+labels = [0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0, 
+        1,1,1,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,1,1,1,
+        1,1,1,1]
 print("num labels: ",len(labels))
 labels = np.array(labels)
 
@@ -45,18 +60,12 @@ X_orig = my_list[p]
 Y_orig = labels[p]
 print('shuffled labels:', Y_orig)
 
-X_test_orig = X_orig[0:11]
-Y_test_orig = Y_orig[0:11]
-X_dev_orig = X_orig[12:23]
-Y_dev_orig = Y_orig[12:23]
-X_train_orig = X_orig[24:len(labels)]
-Y_train_orig = Y_orig[24:len(labels)]
-print(len(X_train_orig))
-print(len(Y_train_orig))
-print(len(X_dev_orig))
-print(len(Y_dev_orig))
-print(len(X_test_orig))
-print(len(Y_test_orig))
+X_test_orig = X_orig[0:15]
+Y_test_orig = Y_orig[0:15]
+X_dev_orig = X_orig[16:31]
+Y_dev_orig = Y_orig[16:31]
+X_train_orig = X_orig[32:len(labels)]
+Y_train_orig = Y_orig[32:len(labels)]
 
 X_train = X_train_orig/255
 X_test = X_test_orig/255
@@ -91,7 +100,7 @@ def forward_prop(X, parameters, keep_prob = 0.5):
     Z3 = tf.keras.layers.Dense(10, activation=None)(P2)
     return Z3
 
-def compute_cost(Z3, Y, beta=0.005):
+def compute_cost(Z3, Y, beta=0.001):
     cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=Z3,labels=Y))
     regularizer = tf.nn.l2_loss(Z3)
     cost = tf.reduce_mean(cost + beta * regularizer)
