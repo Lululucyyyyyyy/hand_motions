@@ -198,7 +198,7 @@ def test(X_test, Y_test, parameters):
         #test_accuracy = accuracy(predict_op, correct_prediction)
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
         #print(accuracy)
-        test_accuracy = accuracy.eval({X: X_train, Y: Y_train})   
+        test_accuracy = accuracy.eval({X: X_test, Y: Y_test})   
         saver = tf.train.Saver()
         saver.save(sess, 'hand_motions.ckpt')
         sess.close()

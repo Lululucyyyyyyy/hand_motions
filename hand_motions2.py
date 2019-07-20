@@ -122,7 +122,7 @@ def compute_cost(Z3, Y, beta=0.01):
     #cost = tf.reduce_mean(-tf.reduce_sum(softmax * tf.log(Y), axis=-1))
     return cost
 
-def model(X_train, Y_train, learning_rate = 0.009, num_epochs = 100, minibatch_size = 64, print_cost = True):
+def model(X_train, Y_train, learning_rate = 0.009, print_cost = True):
     ops.reset_default_graph()                         
     tf.set_random_seed(1)
     seed = 3                                          

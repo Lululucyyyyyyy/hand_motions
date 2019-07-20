@@ -12,23 +12,29 @@ from PIL import Image
 import glob
 import random
 from tensorflow.keras import layers
+import os
+
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 #directions = ['five', 'one']
+def load_images(globpath):
+    for image in globpath:
+        with open(image, 'rb') as file:
+            img = Image.open(file)
+            img = img.resize((224, 224))
+            np_img = np.array(img)
+            my_list.append(np_img)
+
 my_list = []
-path = "dataset3/*.JPG"
-temp = glob.glob(path)
-for image in temp:
-    with open(image, 'rb') as file:
-        img = Image.open(file)
-        img = img.resize((224, 224))
-        np_img = np.array(img)
-        my_list.append(np_img)
+load_images(glob.glob("dataset3/*.JPG"))
+load_images(glob.glob("dataset3/*.jpeg"))
 my_list = np.array(my_list)
 print('my_list.shape: ', my_list.shape)
 
-# 0 five, 1 one
-labels = [0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1]
-print(len(labels))
+# 0 five (45), 1 one (45)
+labels = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, #45
+          1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]#45
+print("num labels: ",len(labels))
 labels = np.array(labels)
 
 #c = np.c_[my_list.reshape(len(my_list), -1), labels.reshape(len(labels), -1)]
@@ -39,16 +45,16 @@ X_orig = my_list[p]
 Y_orig = labels[p]
 print('shuffled labels:', Y_orig)
 
-X_test_orig = X_orig[0:5]
-Y_test_orig = Y_orig[0:5]
-#X_dev_orig = X_orig[12:22]
-#Y_dev_orig = Y_orig[12:22]
-X_train_orig = X_orig[6:len(labels)]
-Y_train_orig = Y_orig[6:len(labels)]
+X_test_orig = X_orig[0:11]
+Y_test_orig = Y_orig[0:11]
+X_dev_orig = X_orig[12:23]
+Y_dev_orig = Y_orig[12:23]
+X_train_orig = X_orig[24:len(labels)]
+Y_train_orig = Y_orig[24:len(labels)]
 print(len(X_train_orig))
 print(len(Y_train_orig))
-#print(len(X_dev_orig))
-#print(len(Y_dev_orig))
+print(len(X_dev_orig))
+print(len(Y_dev_orig))
 print(len(X_test_orig))
 print(len(Y_test_orig))
 
@@ -77,17 +83,15 @@ def forward_prop(X, parameters, keep_prob = 0.5):
     rate=1-keep_prob
     Z1 = tf.nn.conv2d(X,W1, strides = [1,1,1,1], padding = 'SAME')
     A1 = tf.nn.relu(Z1)
-    A1 = tf.nn.dropout(A1,rate=rate)
     P1 = tf.nn.max_pool(A1, ksize = [1,8,8,1], strides = [1,8,8,1], padding = 'SAME')
     Z2 = tf.nn.conv2d(P1,W2, strides = [1,1,1,1], padding = 'SAME')
     A2 = tf.nn.relu(Z2)
-    A2 = tf.nn.dropout(A2,rate=rate)
     P2 = tf.nn.max_pool(A2, ksize = [1,4,4,1], strides = [1,4,4,1], padding = 'SAME')
     P2 = tf.layers.Flatten()(P2)
     Z3 = tf.keras.layers.Dense(10, activation=None)(P2)
     return Z3
 
-def compute_cost(Z3, Y, beta=0.01):
+def compute_cost(Z3, Y, beta=0.005):
     cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=Z3,labels=Y))
     regularizer = tf.nn.l2_loss(Z3)
     cost = tf.reduce_mean(cost + beta * regularizer)
@@ -99,7 +103,7 @@ def compute_cost(Z3, Y, beta=0.01):
     #cost = tf.reduce_mean(-tf.reduce_sum(softmax * tf.log(Y), axis=-1))
     return cost
 
- def model(X_train, Y_train, learning_rate = 0.009, num_epochs = 100, minibatch_size = 64, print_cost = True):
+def model(X_train, Y_train, learning_rate = 0.009, num_epochs = 100, minibatch_size = 64, print_cost = True):
     ops.reset_default_graph()                         
     tf.set_random_seed(1)
     seed = 3                                          
@@ -117,23 +121,28 @@ def compute_cost(Z3, Y, beta=0.01):
     with tf.Session() as sess:
         sess.run(init)
 
-        print("Training")
+        print("=========Training==========")
         
-        for i in range(len(labels)):
-            cost_ = 0
-            _, temp_cost = sess.run([optimizer, cost], feed_dict={X:X_train, Y:Y_train})
-            cost_ += temp_cost / len(labels)
+        for epoch in range(num_epochs):
+            minibatch_cost = 0
+            num_minibatches = int(m / minibatch_size)
+            seed = seed + 1
+            minibatches = random_mini_batches(X_train, Y_train, minibatch_size, seed)
+            for minibatch in minibatches:
+                (minibatch_X, minibatch_Y) = minibatch
+                _, temp_cost = sess.run([optimizer, cost], feed_dict={X:X_train, Y:Y_train})
+                minibatch_cost += temp_cost / num_minibatches
 
-            if print_cost == True:
-                print ("Cost after iteration %i: %f" % (i, cost_))
-            if print_cost == True:
-                costs.append(cost_)
+            if print_cost == True and epoch % 5 == 0:
+                print ("Cost after epoch %i: %f" % (epoch, minibatch_cost))
+            if print_cost == True and epoch % 1 == 0:
+                costs.append(minibatch_cost)
   
         plt.plot(np.squeeze(costs))
         plt.ylabel('cost')
         plt.xlabel('iterations (per tens)')
         plt.title("Learning rate =" + str(learning_rate))
-        #plt.show()
+        plt.show()
 
         predicted = tf.argmax(Z3, 1)
         correct_prediction = tf.equal(predicted, tf.argmax(Y, 1))
@@ -161,10 +170,10 @@ def test(X_test, Y_test, parameters):
     cost = compute_cost(Z3, Y)
     init = tf.global_variables_initializer()
 
-    print("Validation or Testing")
+    print("=====Validation or Testing=====")
     with tf.Session() as sess:
         sess.run(init)
-        a = sess.run(cost, {X: X_test, Y:Y_test})
+        a = sess.run(cost, feed_dict={X: X_test, Y:Y_test})
 
         plt.plot(np.squeeze(a))
         #plt.show()
@@ -175,7 +184,7 @@ def test(X_test, Y_test, parameters):
         #test_accuracy = accuracy(predict_op, correct_prediction)
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
         #print(accuracy)
-        test_accuracy = accuracy.eval({X: X_train, Y: Y_train})   
+        test_accuracy = accuracy.eval({X: X_test, Y: Y_test})   
         saver = tf.train.Saver()
         saver.save(sess, 'hand_motions.ckpt')
         sess.close()
@@ -186,6 +195,6 @@ train, parameters = model(X_train, Y_train)
 print("training accuracy: ", train)
 dev = test(X_dev, Y_dev, parameters)
 print("validation accuracy: ", str(dev))
-test = test(X_test, Y_test, parameters)
-print("test accuracy: ", str(test))
+test_accuracy = test(X_test, Y_test, parameters)
+print("test accuracy: ", str(test_accuracy))
 print('done')
