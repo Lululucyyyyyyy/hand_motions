@@ -1,2 +1,0 @@
-model_checkpoint_path: "hand_motions.ckpt"
-all_model_checkpoint_paths: "hand_motions.ckpt"
